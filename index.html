@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShowMe</title>
+</head>
+<body>
+    <h1>ShowMe</h1>
+    <p>This is content from the DEV branch</p>
+    <p>Hello, this is a new paragraph from another branch: feature/new-p</p>
+    <label for="file-input">Choose file(s)</label>
+    <input type="file" id="file-input">
+    <p id="file-status" aria-live="polite"></p>
+    <pre id="file-payload"></pre>
+    <button type="button" id="screen-share-btn">Share screen</button>
+    <p id="capture-status" aria-live="polite"></p>
+    <video id="screen-preview" autoplay muted playsinline></video>
+    <h2>Recorded Screen</h2>
+    <video id="recorded-video" controls playsinline></video>
+    <script src="mediaCapture.js" defer></script>
+</body>
+</html>
