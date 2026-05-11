@@ -4,8 +4,8 @@
  *
  * @returns {object|null} Root element description or null if no DOM exists.
  */
-function traverseDomWithCoordinates() {
-    if (typeof document === "undefined" || !document.documentElement) {
+ function traverseDomWithCoordinates(documentNode) {
+    if (typeof documentNode === "undefined" || !documentNode.documentElement) {
       return null;
     }
   
@@ -36,8 +36,9 @@ function traverseDomWithCoordinates() {
       };
     }
   
-    return describeElement(document.documentElement);
+    return describeElement(documentNode.documentElement);
   }
+
   
   if (typeof module !== "undefined" && module.exports) {
     module.exports = { traverseDomWithCoordinates };
