@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Gemini Audio WebSocket Client</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 24px;
+    }
+
+    button {
+      margin-right: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+
+    #logs {
+      margin-top: 20px;
+      background: #111;
+      color: #0f0;
+      padding: 16px;
+      height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Gemini Audio WebSocket Client</h1>
+
+  <button id="connectBtn">Connect</button>
+  <button id="startBtn">Start Recording</button>
+  <button id="stopBtn">Stop Recording</button>
+
+  <div id="logs"></div>
+
+  <script>
+    const logs = document.getElementById('logs');
+
+    function log(message) {
+      console.log(message);
+
+      logs.textContent += message + '\n';
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    let socket;
+    let mediaRecorder;
+
+    // --------------------------------------------------
+    // Connect WebSocket
+    // --------------------------------------------------
+
+    document.getElementById('connectBtn').onclick = () => {
+
+      socket = new WebSocket(WS_URL);
+
+      socket.onopen = () => {
+        log('Connected to websocket server');
+      };
+
+      socket.onclose = () => {
+        log('Disconnected from server');
+      };
+
+      socket.onerror = (error) => {
+        log('WebSocket error');
+        console.error(error);
+      };
+
+      socket.onmessage = async (event) => {
+
+        const message = JSON.parse(event.data);
+
+        // ------------------------------------------
+        // SYSTEM
+        // ------------------------------------------
+
+        if (message.type === 'system') {
+          log(`[SYSTEM] ${message.message}`);
+        }
+
+        // ------------------------------------------
+        // PONG
+        // ------------------------------------------
+
+        else if (message.type === 'pong') {
+          log(`[PONG] ${message.timestamp}`);
+        }
+
+        // ------------------------------------------
+        // TRANSCRIPTION
+        // ------------------------------------------
+
+        else if (message.type === 'transcription') {
+          log(`[TRANSCRIPTION] ${message.text}`);
+        }
+
+        // ------------------------------------------
+        // AI TEXT
+        // ------------------------------------------
+
+        else if (message.type === 'ai_text') {
+          log(`[AI TEXT] ${message.text}`);
+        }
+
+        // ------------------------------------------
+        // AUDIO RESPONSE
+        // ------------------------------------------
+
+        else if (message.type === 'audio') {
+
+          log('[AUDIO] Received AI audio response');
+
+          // Decode base64 audio
+          const binaryString = atob(message.data);
+
+          const bytes = new Uint8Array(binaryString.length);
+
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          // Create audio blob
+          const audioBlob = new Blob(
+            [bytes],
+            { type: message.mimeType }
+          );
+
+          // Play audio
+          const audioUrl = URL.createObjectURL(audioBlob);
+
+          const audio = new Audio(audioUrl);
+
+          audio.play()
+            .then(() => {
+              log('[AUDIO] Playback started');
+            })
+            .catch((error) => {
+              log('[AUDIO] Playback failed');
+              console.error(error);
+            });
+        }
+
+        // ------------------------------------------
+        // ERROR
+        // ------------------------------------------
+
+        else if (message.type === 'error') {
+          log(`[ERROR] ${message.message}`);
+        }
+        else if (message.type === 'highlight-node') {
+            log(`[HIGHLIGHT NODE] ${message.highlightNode}`);
+            pulseNode(message.highlightNode);
+        }
+
+        // ------------------------------------------
+        // UNKNOWN
+        // ------------------------------------------
+
+        else {
+          log(`[UNKNOWN] ${JSON.stringify(message)}`);
+        }
+      };
+    };
+
+    // --------------------------------------------------
+    // Start Recording
+    // --------------------------------------------------
+
+    document.getElementById('startBtn').onclick = async () => {
+
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        log('Socket is not connected');
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
+
+      mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm'
+      });
+
+      mediaRecorder.ondataavailable = async (event) => {
+
+        if (event.data.size === 0) {
+          return;
+        }
+
+        const arrayBuffer = await event.data.arrayBuffer();
+
+        socket.send(arrayBuffer);
+
+        log(`[MIC] Sent audio chunk (${arrayBuffer.byteLength} bytes)`);
+      };
+
+      // Send chunk every second
+      mediaRecorder.start(1000);
+
+      log('Recording started');
+    };
+
+    // --------------------------------------------------
+    // Stop Recording
+    // --------------------------------------------------
+
+    document.getElementById('stopBtn').onclick = () => {
+
+      if (!mediaRecorder) {
+        return;
+      }
+
+      mediaRecorder.stop();
+
+      log('Recording stopped');
+    };
+  </script>
+
+</body>
+</html>

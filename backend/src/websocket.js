@@ -61,11 +61,10 @@ wss.on("connection", (ws) => {
       if (isBinary) {
         console.log("Received binary audio chunk");
 
-        const audioBuffer = Buffer.from(message);
 
         // Send audio to Gemini
         const geminiResponse = await sendDataToGemini(
-          audioBuffer,
+          message.audioBuffer,
           message.snapshotBase64,
           message.currentUrl,
           message.traversedDom,
